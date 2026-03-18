@@ -1,0 +1,58 @@
+/* Leave Management App Styles */
+
+/* Navigation */
+.nav-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200;
+}
+
+.nav-link.active {
+    @apply bg-slate-100 text-slate-900;
+}
+
+.nav-link:not(.active) {
+    @apply text-slate-500 hover:text-slate-900 hover:bg-slate-50;
+}
+
+/* Cards */
+.app-card {
+    @apply bg-white rounded-xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300;
+}
+
+/* Leave type badges */
+.leave-badge-sick {
+    @apply bg-rose-50 text-rose-700 border border-rose-200;
+}
+
+.leave-badge-casual {
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
+}
+
+.leave-badge-earned {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+/* Status badges */
+.status-pending {
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
+}
+
+.status-approved {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+.status-rejected {
+    @apply bg-rose-50 text-rose-700 border border-rose-200;
+}
+
+/* Role badges */
+.role-admin {
+    @apply bg-indigo-50 text-indigo-700;
+}
+
+.role-manager {
+    @apply bg-sky-50 text-sky-700;
+}
+
+.role-employee {
+    @apply bg-slate-100 text-slate-600;
+}

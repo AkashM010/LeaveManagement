@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { leaveTypeConfig, categoryConfig } from "../config/leaveConfig";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
@@ -73,7 +73,7 @@ export default function CalendarView() {
     return (
         <div className="animate-fade-in" data-testid="calendar-page">
             <div className="mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     Leave Calendar
                 </h1>
                 <p className="text-slate-500 mt-1 text-sm">View approved leaves across the team</p>
@@ -82,7 +82,7 @@ export default function CalendarView() {
             <Card className="app-card">
                 <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-semibold text-slate-800" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             {MONTHS[month]} {year}
                         </CardTitle>
                         <div className="flex gap-1">
@@ -90,7 +90,7 @@ export default function CalendarView() {
                                 variant="outline"
                                 size="sm"
                                 onClick={prevMonth}
-                                className="rounded-lg h-8 w-8 p-0 border-slate-200"
+                                className="rounded-lg h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
                                 data-testid="prev-month"
                             >
                                 <ChevronLeft className="w-4 h-4" />
@@ -99,7 +99,7 @@ export default function CalendarView() {
                                 variant="outline"
                                 size="sm"
                                 onClick={nextMonth}
-                                className="rounded-lg h-8 w-8 p-0 border-slate-200"
+                                className="rounded-lg h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
                                 data-testid="next-month"
                             >
                                 <ChevronRight className="w-4 h-4" />
@@ -107,7 +107,7 @@ export default function CalendarView() {
                         </div>
                     </div>
                     {/* Legend */}
-                    <div className="flex gap-4 mt-3">
+                    <div className="flex flex-wrap gap-4 mt-3">
                         {Object.entries(categoryConfig).map(([type, cfg]) => (
                             <div key={type} className="flex items-center gap-1.5 text-xs text-slate-500">
                                 <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
@@ -138,10 +138,10 @@ export default function CalendarView() {
                                     key={idx}
                                     className={`min-h-[80px] md:min-h-[100px] p-1.5 rounded-lg border transition-colors ${cell.day
                                         ? isToday
-                                            ? "border-slate-400 bg-slate-50"
+                                            ? "border-slate-400 bg-slate-50 dark:bg-slate-800/50"
                                             : isWeekend
-                                                ? "border-slate-100 bg-slate-50/50"
-                                                : "border-slate-100 hover:border-slate-200 bg-white"
+                                                ? "border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50/50"
+                                                : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:border-slate-700 bg-white"
                                         : "border-transparent"
                                     }`}
                                     data-testid={cell.date ? `cal-day-${cell.date}` : undefined}
@@ -154,7 +154,7 @@ export default function CalendarView() {
                                                         ? "bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center"
                                                         : isWeekend
                                                             ? "text-slate-300"
-                                                            : "text-slate-600"
+                                                            : "text-slate-600 dark:text-slate-400"
                                                 }`}
                                             >
                                                 {cell.day}

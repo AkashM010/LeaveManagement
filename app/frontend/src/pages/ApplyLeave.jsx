@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 import { leaveTypeConfig, categoryConfig } from "../config/leaveConfig";
 
@@ -34,7 +34,7 @@ function calcDays(start, end, holidays = []) {
 
     while (current <= endDate) {
         const dateStr = format(current, "yyyy-MM-dd");
-        if (current.getDay() !== 0 && current.getDay() !== 6 && !holidaySet.has(dateStr)) { 
+        if (current.getDay() !== 0 && current.getDay() !== 6 && !holidaySet.has(dateStr)) {
             days++;
         }
         current.setDate(current.getDate() + 1);
@@ -85,7 +85,7 @@ export default function ApplyLeave() {
     const isEndDateDisabled = (date) => {
         if (isDateDisabled(date)) return true;
         if (startDate && date < new Date(new Date(startDate).setHours(0, 0, 0, 0))) return true;
-        
+
         if (startDate) {
             const startStr = format(startDate, "yyyy-MM-dd");
             const endStr = format(date, "yyyy-MM-dd");
@@ -109,11 +109,11 @@ export default function ApplyLeave() {
 
     const handleSubmit = async () => {
         if (!category || !startDate || !endDate || !reason.trim()) {
-            toast.error("Please fill in all mandatory fields");
+            toast.error("Whoa there! Don't leave us hanging—fill out the mandatory blanks.");
             return;
         }
         if (endDate < startDate) {
-            toast.error("End date must be after start date");
+            toast.error("Time travel isn't supported yet! End date must be after start date.");
             return;
         }
         setSubmitting(true);
@@ -125,10 +125,10 @@ export default function ApplyLeave() {
                 end_date: format(endDate, "yyyy-MM-dd"),
                 reason: reason.trim(),
             });
-            toast.success("Leave request submitted successfully!");
+            toast.success("Request sent! Now, start dreaming of that beach...");
             navigate("/my-leaves");
         } catch (err) {
-            toast.error(err.response?.data?.detail || "Failed to submit leave request");
+            toast.error(err.response?.data?.detail || "Computer says no. We couldn't submit that request.");
         } finally {
             setSubmitting(false);
         }
@@ -139,7 +139,7 @@ export default function ApplyLeave() {
     return (
         <div className="animate-fade-in max-w-2xl" data-testid="apply-leave-page">
             <div className="mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     Apply for Leave
                 </h1>
                 <p className="text-slate-500 mt-1 text-sm">Submit a new leave request</p>
@@ -175,14 +175,14 @@ export default function ApplyLeave() {
 
             <Card className="app-card">
                 <CardHeader>
-                    <CardTitle className="text-base font-semibold text-slate-800">Leave Details</CardTitle>
+                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">Leave Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
                     {/* Leave Category (Optional) */}
                     <div>
-                        <label className="text-sm font-medium text-slate-600 mb-2 block">Leave Category</label>
+                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 block">Leave Category</label>
                         <Select value={category} onValueChange={setCategory}>
-                            <SelectTrigger className="rounded-lg border-slate-200" data-testid="leave-category-select">
+                            <SelectTrigger className="rounded-lg border-slate-200 dark:border-slate-700" data-testid="leave-category-select">
                                 <SelectValue placeholder="Select a category (e.g. Sick, Casual)" />
                             </SelectTrigger>
                             <SelectContent>
@@ -199,14 +199,14 @@ export default function ApplyLeave() {
                     </div>
 
                     {/* Date Range */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-sm font-medium text-slate-600 mb-2 block">Start Date</label>
+                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 block">Start Date</label>
                             <Popover open={startOpen} onOpenChange={setStartOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="w-full justify-start text-left font-normal rounded-lg border-slate-200"
+                                        className="w-full justify-start text-left font-normal rounded-lg border-slate-200 dark:border-slate-700"
                                         data-testid="start-date-picker"
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 text-slate-400" />
@@ -224,12 +224,12 @@ export default function ApplyLeave() {
                             </Popover>
                         </div>
                         <div>
-                            <label className="text-sm font-medium text-slate-600 mb-2 block">End Date</label>
+                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 block">End Date</label>
                             <Popover open={endOpen} onOpenChange={setEndOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="w-full justify-start text-left font-normal rounded-lg border-slate-200"
+                                        className="w-full justify-start text-left font-normal rounded-lg border-slate-200 dark:border-slate-700"
                                         data-testid="end-date-picker"
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4 text-slate-400" />
@@ -254,19 +254,19 @@ export default function ApplyLeave() {
                             <Thermometer className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                             <div>
                                 <p className="font-semibold mb-1">Loss of Pay (LOP) Notice</p>
-                                <p>You are requesting {requestedDays} days, but only have {requestedDays - lopDays} available. <br/> <strong>{lopDays} day(s) will be marked as Loss of Pay (LOP)</strong>.</p>
+                                <p>You are requesting {requestedDays} days, but only have {requestedDays - lopDays} available. <br /> <strong>{lopDays} day(s) will be marked as Loss of Pay (LOP)</strong>.</p>
                             </div>
                         </div>
                     )}
 
                     {/* Reason */}
                     <div>
-                        <label className="text-sm font-medium text-slate-600 mb-2 block">Reason</label>
+                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 block">Reason</label>
                         <Textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                             placeholder="Briefly describe the reason for your leave..."
-                            className="rounded-lg border-slate-200 min-h-[100px] resize-none"
+                            className="rounded-lg border-slate-200 dark:border-slate-700 min-h-[100px] resize-none"
                             data-testid="leave-reason"
                         />
                     </div>

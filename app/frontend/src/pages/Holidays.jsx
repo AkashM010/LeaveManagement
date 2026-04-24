@@ -7,7 +7,7 @@ import { UploadCloud, Trash2, Download, Calendar as CalendarIcon } from "lucide-
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 export default function Holidays() {
     const { currentUser } = useUser();
@@ -46,7 +46,7 @@ export default function Holidays() {
             toast.success(res.data.message);
             loadHolidays();
         } catch (err) {
-            toast.error(err.response?.data?.detail || "Failed to upload file");
+            toast.error(err.response?.data?.detail || "That file is wearing a disguise! Make sure it has 'Date' and 'Holiday Name' columns.");
         } finally {
             setUploading(false);
             e.target.value = null; // reset input
@@ -56,10 +56,10 @@ export default function Holidays() {
     const handleDelete = async (id) => {
         try {
             await axios.delete(`${API}/holidays/${id}`);
-            toast.success("Holiday deleted");
+            toast.success("Holiday deleted! Back to the salt mines, everyone.");
             loadHolidays();
         } catch (err) {
-            toast.error("Failed to delete holiday");
+            toast.error("The holiday is staying put! Failed to delete.");
         }
     };
 
@@ -86,7 +86,7 @@ export default function Holidays() {
         <div className="animate-fade-in max-w-4xl" data-testid="holidays-page">
             <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100" style={{ fontFamily: 'Manrope, sans-serif' }}>
                         Company Holidays
                     </h1>
                     <p className="text-slate-500 mt-1 text-sm">Manage annual company-wide holidays.</p>
@@ -94,20 +94,20 @@ export default function Holidays() {
                 <Button 
                     variant="outline" 
                     onClick={downloadTemplate}
-                    className="flex items-center gap-2 border-slate-200"
+                    className="flex items-center gap-2 border-slate-200 dark:border-slate-700"
                 >
                     <Download className="w-4 h-4" /> Download Template
                 </Button>
             </div>
 
-            <Card className="app-card mb-8 border-dashed border-2 border-slate-200 bg-slate-50/50">
+            <Card className="app-card mb-8 border-dashed border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50/50">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                     <div className="p-4 bg-indigo-50 rounded-full mb-4">
                         <UploadCloud className="w-8 h-8 text-indigo-500" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-800 mb-2">Upload Holiday File</h3>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">Upload Holiday File</h3>
                     <p className="text-sm text-slate-500 text-center max-w-sm mb-6">
-                        Upload a .csv or .xlsx file containing two columns exactly named <strong className="text-slate-700">Date</strong> and <strong className="text-slate-700">Holiday Name</strong>.
+                        Upload a .csv or .xlsx file containing two columns exactly named <strong className="text-slate-700 dark:text-slate-300">Date</strong> and <strong className="text-slate-700 dark:text-slate-300">Holiday Name</strong>.
                     </p>
                     
                     <div className="relative">
@@ -129,8 +129,8 @@ export default function Holidays() {
             </Card>
 
             <Card className="app-card">
-                <CardHeader className="border-b bg-slate-50/50 pb-4">
-                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <CardHeader className="border-b bg-slate-50 dark:bg-slate-800/50/50 pb-4">
+                    <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4 text-slate-400" />
                         Current Holidays ({holidays.length})
                     </CardTitle>
@@ -143,9 +143,9 @@ export default function Holidays() {
                     ) : (
                         <div className="divide-y divide-slate-100">
                             {holidays.map((h) => (
-                                <div key={h.id} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                                <div key={h.id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:bg-slate-800/50 transition-colors">
                                     <div>
-                                        <p className="font-semibold text-slate-800">{h.name}</p>
+                                        <p className="font-semibold text-slate-800 dark:text-slate-200">{h.name}</p>
                                         <p className="text-sm text-slate-500 mt-0.5">{format(new Date(h.date + "T00:00:00"), "MMMM do, yyyy")}</p>
                                     </div>
                                     <Button

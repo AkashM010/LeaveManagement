@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useUser } from "../context/UserContext";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,6 +13,7 @@ export default function Login() {
   const { login, currentUser } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // If already logged in, redirect to dashboard
   if (currentUser) {
@@ -28,54 +31,69 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
-      <Card className="w-full max-w-md shadow-lg border-slate-200/60">
+    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-background px-4 transition-colors">
+      {/* Theme toggle in top-right corner */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="space-y-1 text-center pb-6">
-          <div className="w-12 h-12 bg-slate-900 rounded-xl mx-auto flex items-center justify-center mb-4 shadow-sm">
-            <span className="text-white font-bold text-xl">LM</span>
+          <div className="w-12 h-12 bg-slate-900 dark:bg-slate-100 rounded-xl mx-auto flex items-center justify-center mb-4 shadow-sm">
+            <span className="text-white dark:text-slate-900 font-bold text-xl">LD</span>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
+          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Welcome back
           </CardTitle>
-          <CardDescription className="text-slate-500">
+          <CardDescription className="text-slate-500 dark:text-slate-400">
             Enter your email and password to sign in
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium leading-none text-slate-700">Email</label>
+              <label className="text-sm font-medium leading-none text-slate-700 dark:text-slate-300">Email</label>
               <Input
                 type="email"
                 placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-white"
+                className="bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium leading-none text-slate-700">Password</label>
+                <label className="text-sm font-medium leading-none text-slate-700 dark:text-slate-300">Password</label>
+                <Link to="/forgot-password" className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+                  Forgot password?
+                </Link>
               </div>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-white"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-            <Button type="submit" className="w-full mt-2 bg-slate-900 hover:bg-slate-800 text-white" disabled={loading}>
+            <Button type="submit" className="w-full mt-2 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm text-slate-500 bg-slate-50 p-4 rounded-lg">
-            <p className="font-semibold mb-2">Demo Credentials:</p>
-            <p>Admin: priya@company.com</p>
-            <p>Manager: raj@company.com</p>
-            <p>Employee: vikram@company.com</p>
-            <p className="mt-2">Password for all: password123</p>
+          <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
+            <p>Default password for all accounts: <strong className="text-slate-700 dark:text-slate-300">password123</strong></p>
+            <p className="mt-1 text-xs">🔒 It is recommended to change your password after first login.</p>
           </div>
         </CardContent>
       </Card>

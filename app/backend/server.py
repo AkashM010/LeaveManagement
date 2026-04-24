@@ -12,11 +12,15 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, date, timedelta
 import jwt
+import random
 from passlib.context import CryptContext
 import pandas as pd
 import io
 import smtplib
 from email.message import EmailMessage
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -89,6 +93,9 @@ class LeaveRequest(BaseModel):
     admin_reviewer_name: Optional[str] = None
     is_lop: bool = False
     lop_days: int = 0
+    is_read: bool = True
+    manager_read: bool = False
+    admin_read: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class LeaveRequestCreate(BaseModel):
@@ -96,7 +103,7 @@ class LeaveRequestCreate(BaseModel):
     leave_type: str = "leave"
     category: Optional[str] = None
     start_date: str
-    start_date: str
+    # start_date: str
     end_date: str
     reason: str
 
@@ -117,7 +124,9 @@ LEAVE_ALLOCATION = {"leave": 18}
 # ── Auth Utilities ──
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.environ.get("JWT_SECRET", "supersecretkey123")  # Use env var in prod
+SECRET_KEY = os.environ.get("JWT_SECRET")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET environment variable is not set! Add it to your .env file.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 security = HTTPBearer()
@@ -167,6 +176,98 @@ async def login(data: LoginData):
 @api_router.get("/auth/me", response_model=EmployeeOut)
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+class ChangePasswordData(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.post("/auth/change-password")
+async def change_password(data: ChangePasswordData, current_user: dict = Depends(get_current_user)):
+    if not verify_password(data.current_password, current_user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    new_hash = get_password_hash(data.new_password)
+    await db.employees.update_one({"id": current_user["id"]}, {"$set": {"password_hash": new_hash}})
+    return {"message": "Password updated successfully! Your new secret is safe with us."}
+
+class ForgotPasswordData(BaseModel):
+    email: str
+
+class ResetPasswordData(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordData, background_tasks: BackgroundTasks):
+    user = await db.employees.find_one({"email": data.email})
+    if not user:
+        # Prevent email enumeration: don't reveal if user exists, just return success
+        return {"message": "If your email is registered, we've sent an OTP your way!"}
+
+    # Rate limit: allow only 1 OTP request per 60 seconds
+    last_request = user.get("reset_otp_requested_at")
+    if last_request:
+        elapsed = (datetime.now(timezone.utc) - datetime.fromisoformat(last_request)).total_seconds()
+        if elapsed < 60:
+            raise HTTPException(status_code=429, detail=f"Please wait {int(60 - elapsed)} seconds before requesting another OTP.")
+
+    otp = str(random.randint(100000, 999999))
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    await db.employees.update_one(
+        {"email": data.email},
+        {"$set": {
+            "reset_otp": otp,
+            "reset_otp_expiry": expiry.isoformat(),
+            "reset_otp_requested_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    subject = "Password Reset - LeaveDesk"
+    content = f"""
+    <p>Hello {user['name']},</p>
+    <p>We received a request to reset your Password. Your One Time Password (OTP) is:</p>
+    <h3 style="background:#f4f4f5;padding:10px;display:inline-block;border-radius:5px;letter-spacing:2px;font-size:24px;">{otp}</h3>
+    <p>This OTP will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+    <p>Best,<br>LeaveDesk System</p>
+    """
+    background_tasks.add_task(send_email_sync, [data.email], subject, content)
+    
+    return {"message": "If your email is registered, we've sent an OTP your way!"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordData):
+    user = await db.employees.find_one({"email": data.email})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid request")
+        
+    if not user.get("reset_otp") or user.get("reset_otp") != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+        
+    expiry_str = user.get("reset_otp_expiry")
+    if not expiry_str:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+        
+    expiry = datetime.fromisoformat(expiry_str)
+    if datetime.now(timezone.utc) > expiry:
+        raise HTTPException(status_code=400, detail="OTP has expired")
+        
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+        
+    new_hash = get_password_hash(data.new_password)
+    
+    await db.employees.update_one(
+        {"email": data.email},
+        {
+            "$set": {"password_hash": new_hash},
+            "$unset": {"reset_otp": "", "reset_otp_expiry": ""}
+        }
+    )
+    
+    return {"message": "Password reset successfully! You can now log in."}
 
 # ── Helper ──
 
@@ -249,6 +350,11 @@ async def calc_days(start: str, end: str) -> int:
 async def create_employee(data: EmployeeCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Only admin can create employees")
+        
+    existing = await db.employees.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="That email is already in the club! Use a unique one.")
+        
     emp_data = data.model_dump()
     pwd = emp_data.pop("password", "password123")
     emp_data["password_hash"] = get_password_hash(pwd)
@@ -288,6 +394,11 @@ async def update_employee(employee_id: str, data: EmployeeUpdate, current_user: 
     updates = {k: v for k, v in data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
+    # Check email uniqueness if email is being changed
+    if "email" in updates:
+        existing = await db.employees.find_one({"email": updates["email"], "id": {"$ne": employee_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="That email is already in use by another employee.")
     await db.employees.update_one({"id": employee_id}, {"$set": updates})
     doc = await db.employees.find_one({"id": employee_id}, {"_id": 0})
     if not doc:
@@ -298,11 +409,92 @@ async def update_employee(employee_id: str, data: EmployeeUpdate, current_user: 
 async def delete_employee(employee_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Only admin can delete employees")
-    result = await db.employees.delete_one({"id": employee_id})
-    if result.deleted_count == 0:
+    # Prevent self-deletion
+    if employee_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account.")
+    # Prevent deleting the last admin
+    emp = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
+    if emp.get("role") == "admin":
+        admin_count = await db.employees.count_documents({"role": "admin"})
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot delete the last admin. The system needs at least one.")
+    await db.employees.delete_one({"id": employee_id})
     await db.leave_requests.delete_many({"employee_id": employee_id})
     return {"message": "Employee deleted"}
+
+@api_router.post("/employees/upload")
+async def upload_employees(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can upload employees")
+
+    content = await file.read()
+    try:
+        if file.filename.endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(content))
+        elif file.filename.endswith((".xls", ".xlsx")):
+            df = pd.read_excel(io.BytesIO(content))
+        else:
+            raise HTTPException(status_code=400, detail="Invalid file format. Please upload CSV or Excel.")
+
+        # Normalize column names
+        cols = {str(c).strip().lower(): str(c) for c in df.columns}
+        
+        name_col, email_col, dept_col, role_col, mgr_col = None, None, None, None, None
+        for k, v in cols.items():
+            if "manager" in k: mgr_col = v
+            elif "email" in k: email_col = v
+            elif "name" in k: name_col = v
+            elif "department" in k: dept_col = v
+            elif "role" in k: role_col = v
+
+        if not name_col or not email_col or not dept_col:
+            raise HTTPException(status_code=400, detail="File must contain at least 'Name', 'Email', and 'Department' columns.")
+
+        inserted_count = 0
+        skipped_count = 0
+        
+        pwd = get_password_hash("password123")
+        
+        for _, row in df.iterrows():
+            name = str(row[name_col]).strip()
+            email = str(row[email_col]).strip().lower()
+            dept = str(row[dept_col]).strip()
+            role = str(row[role_col]).strip().lower() if role_col and not pd.isna(row[role_col]) else "employee"
+            
+            if pd.isna(row[name_col]) or pd.isna(row[email_col]) or name.lower() == "nan" or email.lower() == "nan":
+                continue
+                
+            # Check existing email
+            existing = await db.employees.find_one({"email": email})
+            if existing:
+                skipped_count += 1
+                continue
+                
+            manager_id = None
+            if mgr_col and not pd.isna(row[mgr_col]):
+                mgr_email = str(row[mgr_col]).strip().lower()
+                manager = await db.employees.find_one({"email": mgr_email})
+                if manager:
+                    manager_id = manager["id"]
+                    
+            emp = Employee(
+                name=name,
+                email=email,
+                department=dept,
+                role=role if role in ["admin", "manager", "employee"] else "employee",
+                password_hash=pwd,
+                manager_id=manager_id
+            )
+            await db.employees.insert_one(emp.model_dump())
+            inserted_count += 1
+            
+        skip_note = f" ({skipped_count} already in the squad, skipped!)" if skipped_count else ""
+        return {"message": f"🎉 Boom! {inserted_count} new team members just joined the party!{skip_note}"}
+    except Exception as e:
+        logger.error(f"Error processing employee upload: {e}")
+        raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
 
 # ── Leave Endpoints ──
 
@@ -325,7 +517,7 @@ async def create_leave(data: LeaveRequestCreate, background_tasks: BackgroundTas
     })
     
     if overlapping:
-        raise HTTPException(status_code=400, detail="Leave request overlaps with an existing pending or approved leave")
+        raise HTTPException(status_code=400, detail="Ouch! This request overlaps with your other plans.")
 
     # Check balance
     year = date.fromisoformat(data.start_date).year
@@ -333,7 +525,7 @@ async def create_leave(data: LeaveRequestCreate, background_tasks: BackgroundTas
     days = await calc_days(data.start_date, data.end_date)
     
     if days == 0:
-        raise HTTPException(status_code=400, detail="Requested period contains only weekends or holidays")
+        raise HTTPException(status_code=400, detail="That's a weekend! You're already free then, silly")
 
     # Always use the combined 'leave' allocation
     lt = "leave"
@@ -420,6 +612,61 @@ async def get_employee_leaves(employee_id: str, current_user: dict = Depends(get
     docs = await db.leave_requests.find({"employee_id": employee_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return docs
 
+@api_router.get("/leaves/notifications")
+async def get_notifications(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    role = current_user["role"]
+
+    # 1. My Leaves: any unread updates
+    my_leaves_count = await db.leave_requests.count_documents({
+        "employee_id": user_id,
+        "is_read": {"$ne": True}
+    })
+
+    # 2. Team Leaves: new/actionable items for manager/admin
+    team_leaves_count = 0
+    if role == "manager":
+        assigned = await db.employees.find({"manager_id": user_id}, {"id": 1}).to_list(1000)
+        assigned_ids = [e["id"] for e in assigned]
+        team_leaves_count = await db.leave_requests.count_documents({
+            "employee_id": {"$in": assigned_ids},
+            "manager_read": {"$ne": True}
+        })
+    elif role == "admin":
+        team_leaves_count = await db.leave_requests.count_documents({
+            "admin_read": {"$ne": True}
+        })
+
+    return {
+        "my_leaves": my_leaves_count,
+        "team_leaves": team_leaves_count
+    }
+
+@api_router.post("/leaves/mark-read")
+async def mark_read(current_user: dict = Depends(get_current_user)):
+    await db.leave_requests.update_many(
+        {"employee_id": current_user["id"]},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "Marked as read"}
+
+@api_router.post("/leaves/team/mark-read")
+async def mark_team_read(current_user: dict = Depends(get_current_user)):
+    role = current_user["role"]
+    if role == "manager":
+        assigned = await db.employees.find({"manager_id": current_user["id"]}, {"id": 1}).to_list(1000)
+        assigned_ids = [e["id"] for e in assigned]
+        await db.leave_requests.update_many(
+            {"employee_id": {"$in": assigned_ids}},
+            {"$set": {"manager_read": True}}
+        )
+    elif role == "admin":
+        await db.leave_requests.update_many(
+            {},
+            {"$set": {"admin_read": True}}
+        )
+    return {"message": "Team leaves marked as read"}
+
 @api_router.put("/leaves/{leave_id}/status", response_model=LeaveRequest)
 async def update_leave_status(leave_id: str, data: LeaveStatusUpdate, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     if data.status not in ("approved", "rejected"):
@@ -439,11 +686,15 @@ async def update_leave_status(leave_id: str, data: LeaveStatusUpdate, background
         update_fields["manager_approval"] = data.status
         update_fields["manager_reviewer_id"] = current_user["id"]
         update_fields["manager_reviewer_name"] = current_user["name"]
+        update_fields["manager_read"] = True # I've just read and reacted to it
+        update_fields["admin_read"] = False # Unread for admin now
         
     elif current_user["role"] == "admin":
         update_fields["admin_approval"] = data.status
         update_fields["admin_reviewer_id"] = current_user["id"]
         update_fields["admin_reviewer_name"] = current_user["name"]
+        update_fields["admin_read"] = True # I've just read and reacted to it
+        update_fields["manager_read"] = False # Unread for manager now
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
         
@@ -458,6 +709,7 @@ async def update_leave_status(leave_id: str, data: LeaveStatusUpdate, background
         overall_status = "approved"
         
     update_fields["status"] = overall_status
+    update_fields["is_read"] = False # Unread for the employee now!
 
     await db.leave_requests.update_one(
         {"id": leave_id},
@@ -595,7 +847,7 @@ async def upload_holidays(file: UploadFile = File(...), current_user: dict = Dep
             )
             inserted_count += 1
             
-        return {"message": f"Successfully processed {inserted_count} holidays"}
+        return {"message": f"Boom! {inserted_count} more reasons to celebrate are now on the calendar."}
     except Exception as e:
         logger.error(f"Error processing upload: {e}")
         raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
@@ -695,7 +947,10 @@ async def seed_data():
 async def root():
     return {"message": "Leave Management API"}
 
-app.include_router(api_router)
+@app.get("/")
+@app.head("/")
+async def health_check():
+    return {"status": "ok", "message": "Leave Management API is running"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -705,5 +960,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+app.include_router(api_router)

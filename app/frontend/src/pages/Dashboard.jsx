@@ -277,7 +277,7 @@ export default function Dashboard() {
                                         return (
                                             <div
                                                 key={leave.id}
-                                                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50/50 hover:bg-slate-50 dark:bg-slate-800/50 transition-colors"
+                                                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:bg-slate-800/50 transition-colors"
                                                 data-testid={`leave-row-${leave.id}`}
                                             >
                                                 <div className="flex items-center gap-3">

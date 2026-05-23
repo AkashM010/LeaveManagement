@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { CalendarIcon, Thermometer, Coffee, Award, Send } from "lucide-react";
+import { CalendarIcon, Thermometer, Coffee, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";

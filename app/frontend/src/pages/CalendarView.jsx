@@ -140,7 +140,7 @@ export default function CalendarView() {
                                         ? isToday
                                             ? "border-slate-400 bg-slate-50 dark:bg-slate-800/50"
                                             : isWeekend
-                                                ? "border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50/50"
+                                                ? "border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                                                 : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:border-slate-700 bg-white"
                                         : "border-transparent"
                                     }`}

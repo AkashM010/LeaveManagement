@@ -901,7 +901,9 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
 # ── Seed ──
 
 @api_router.post("/seed")
-async def seed_data():
+async def seed_data(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can seed data")
     # Force reset if seeded with old format
     await db.employees.delete_many({})
     await db.leave_requests.delete_many({})

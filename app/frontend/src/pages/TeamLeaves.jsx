@@ -9,7 +9,6 @@ import { Check, X, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { leaveTypeConfig, statusConfig, categoryConfig } from "../config/leaveConfig";
 
-// test comment
 const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 export default function TeamLeaves() {

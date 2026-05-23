@@ -100,7 +100,7 @@ export default function Holidays() {
                 </Button>
             </div>
 
-            <Card className="app-card mb-8 border-dashed border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50/50">
+            <Card className="app-card mb-8 border-dashed border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                     <div className="p-4 bg-indigo-50 rounded-full mb-4">
                         <UploadCloud className="w-8 h-8 text-indigo-500" />
@@ -129,7 +129,7 @@ export default function Holidays() {
             </Card>
 
             <Card className="app-card">
-                <CardHeader className="border-b bg-slate-50 dark:bg-slate-800/50/50 pb-4">
+                <CardHeader className="border-b bg-slate-50 dark:bg-slate-800/50 pb-4">
                     <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4 text-slate-400" />
                         Current Holidays ({holidays.length})

@@ -45,63 +45,8 @@ const roleColors = {
     employee: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700",
 };
 
-export default function Layout({ children }) {
-    const { currentUser, logout } = useUser();
-    const [notifications, setNotifications] = useState({ my_leaves: 0, team_leaves: 0 });
-    const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
-    const [pwdForm, setPwdForm] = useState({ current: "", newPwd: "", confirm: "" });
-    const [pwdLoading, setPwdLoading] = useState(false);
-    const [showPwd, setShowPwd] = useState({ current: false, newPwd: false, confirm: false });
-
-    useEffect(() => {
-        if (!currentUser) return;
-        const fetchNotifs = async () => {
-            try {
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/leaves/notifications`);
-                setNotifications(res.data);
-            } catch (err) {
-                console.error("Failed to fetch notifications:", err);
-            }
-        };
-        fetchNotifs();
-        const interval = setInterval(fetchNotifs, 3000); 
-        return () => clearInterval(interval);
-    }, [currentUser]);
-
-    const filteredNav = navItems.filter(
-        (item) => !item.roles || (currentUser && item.roles.includes(currentUser.role))
-    );
-
-    const handleChangePassword = async () => {
-        if (!pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm) {
-            toast.error("All fields are required!");
-            return;
-        }
-        if (pwdForm.newPwd !== pwdForm.confirm) {
-            toast.error("New passwords don't match!");
-            return;
-        }
-        if (pwdForm.newPwd.length < 6) {
-            toast.error("New password must be at least 6 characters.");
-            return;
-        }
-        setPwdLoading(true);
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/change-password`, {
-                current_password: pwdForm.current,
-                new_password: pwdForm.newPwd,
-            });
-            toast.success(res.data.message);
-            setPwdDialogOpen(false);
-            setPwdForm({ current: "", newPwd: "", confirm: "" });
-        } catch (err) {
-            toast.error(err.response?.data?.detail || "Failed to change password.");
-        } finally {
-            setPwdLoading(false);
-        }
-    };
-
-    const SidebarContent = () => (
+function SidebarContent({ filteredNav, notifications, currentUser, roleColors, setPwdDialogOpen, logout }) {
+    return (
         <>
             {/* Logo */}
             <div className="mb-8">
@@ -165,12 +110,69 @@ export default function Layout({ children }) {
             </div>
         </>
     );
+}
+
+export default function Layout({ children }) {
+    const { currentUser, logout } = useUser();
+    const [notifications, setNotifications] = useState({ my_leaves: 0, team_leaves: 0 });
+    const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
+    const [pwdForm, setPwdForm] = useState({ current: "", newPwd: "", confirm: "" });
+    const [pwdLoading, setPwdLoading] = useState(false);
+    const [showPwd, setShowPwd] = useState({ current: false, newPwd: false, confirm: false });
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const fetchNotifs = async () => {
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/leaves/notifications`);
+                setNotifications(res.data);
+            } catch (err) {
+                console.error("Failed to fetch notifications:", err);
+            }
+        };
+        fetchNotifs();
+        const interval = setInterval(fetchNotifs, 3000); 
+        return () => clearInterval(interval);
+    }, [currentUser]);
+
+    const filteredNav = navItems.filter(
+        (item) => !item.roles || (currentUser && item.roles.includes(currentUser.role))
+    );
+
+    const handleChangePassword = async () => {
+        if (!pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm) {
+            toast.error("All fields are required!");
+            return;
+        }
+        if (pwdForm.newPwd !== pwdForm.confirm) {
+            toast.error("New passwords don't match!");
+            return;
+        }
+        if (pwdForm.newPwd.length < 6) {
+            toast.error("New password must be at least 6 characters.");
+            return;
+        }
+        setPwdLoading(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/change-password`, {
+                current_password: pwdForm.current,
+                new_password: pwdForm.newPwd,
+            });
+            toast.success(res.data.message);
+            setPwdDialogOpen(false);
+            setPwdForm({ current: "", newPwd: "", confirm: "" });
+        } catch (err) {
+            toast.error(err.response?.data?.detail || "Failed to change password.");
+        } finally {
+            setPwdLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#f8fafc] dark:bg-background">
             {/* Desktop Sidebar */}
             <aside className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-card border-r border-slate-200 dark:border-border p-6 flex-col gap-2 z-50 hidden lg:flex">
-                <SidebarContent />
+                <SidebarContent filteredNav={filteredNav} notifications={notifications} currentUser={currentUser} roleColors={roleColors} setPwdDialogOpen={setPwdDialogOpen} logout={logout} />
             </aside>
 
             {/* Mobile Header */}
